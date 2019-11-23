@@ -1,18 +1,19 @@
 package account
 
 import (
-	"btcworker/mongo"
-	rs "btcworker/redis"
-	rsmgo "btcworker/redis/mongo"
-	"btcworker/redis/utils"
-	"btcworker/utils/btcd"
-	"btcworker/utils/logger"
 	"encoding/json"
 	"errors"
 	"log"
 	"math"
 	"strconv"
 	"time"
+
+	"github.com/btcd-address-indexing-worker/mongo"
+	rs "github.com/btcd-address-indexing-worker/redis"
+	rsmgo "github.com/btcd-address-indexing-worker/redis/mongo"
+	"github.com/btcd-address-indexing-worker/redis/utils"
+	"github.com/btcd-address-indexing-worker/utils/btcd"
+	"github.com/btcd-address-indexing-worker/utils/logger"
 
 	"github.com/go-bongo/bongo"
 	"github.com/go-redis/redis"

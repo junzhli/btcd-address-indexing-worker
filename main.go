@@ -1,9 +1,6 @@
 package main
 
 import (
-	"btcworker/account"
-	"btcworker/mongo"
-	"btcworker/utils/logger"
 	"encoding/json"
 	"log"
 	"os"
@@ -12,6 +9,10 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/btcd-address-indexing-worker/account"
+	"github.com/btcd-address-indexing-worker/mongo"
+	"github.com/btcd-address-indexing-worker/utils/logger"
 
 	"github.com/go-bongo/bongo"
 	"github.com/go-redis/redis"

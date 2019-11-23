@@ -1,9 +1,10 @@
 package mongo
 
 import (
-	mg "btcworker/mongo"
 	"encoding/json"
 	"time"
+
+	mg "github.com/btcd-address-indexing-worker/mongo"
 
 	"github.com/go-redis/redis"
 )

@@ -1,8 +1,9 @@
 package mongo
 
 import (
-	"btcworker/utils/logger"
 	"errors"
+
+	"github.com/btcd-address-indexing-worker/utils/logger"
 
 	"github.com/go-bongo/bongo"
 	"gopkg.in/mgo.v2/bson"

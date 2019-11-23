@@ -1,7 +1,6 @@
 package btcd
 
 import (
-	"btcworker/utils/logger"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
@@ -9,6 +8,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/btcd-address-indexing-worker/utils/logger"
 )
 
 type request struct {
