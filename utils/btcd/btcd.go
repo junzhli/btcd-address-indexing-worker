@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/btcd-address-indexing-worker/utils/logger"
+	"github.com/junzhli/btcd-address-indexing-worker/utils/logger"
 )
 
 type request struct {

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	mg "github.com/btcd-address-indexing-worker/mongo"
+	mg "github.com/junzhli/btcd-address-indexing-worker/mongo"
 
 	"github.com/go-redis/redis"
 )
