@@ -1,4 +1,5 @@
 # Bitcoin address indexing worker
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)  [![GoDoc](https://godoc.org/github.com/junzhli/btcd-address-indexing-worker/utils/btcd?status.svg)](https://godoc.org/github.com/junzhli/btcd-address-indexing-worker/utils/btcd)    
 Bitcoin Address Indexing Worker provides the web service `btcd-address-indexing-service` with additional indexing, caching mechanisms and address relevant information lookups
 
 ## Table of Contents
