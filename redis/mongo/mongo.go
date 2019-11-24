@@ -9,7 +9,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
-// CacheUserHistory returns the data stored in redis
+// CacheUserHistory stores the data to redis
 func CacheUserHistory(rs *redis.Client, key string, userdata *mg.UserHistory, ttl time.Duration) error {
 	res, err := json.Marshal(*userdata)
 	if err != nil {
@@ -23,7 +23,7 @@ func CacheUserHistory(rs *redis.Client, key string, userdata *mg.UserHistory, tt
 	return nil
 }
 
-// RestoreUserHistory stores the data to redis
+// RestoreUserHistory returns the data stored in redis
 func RestoreUserHistory(rs *redis.Client, key string) (*mg.UserHistory, error) {
 	result, err := rs.Get(key).Result()
 	if err != nil {
