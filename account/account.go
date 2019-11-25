@@ -25,6 +25,7 @@ type Config struct {
 		Endpoint string
 		Username string
 		Password string
+		Timeout  time.Duration
 	}
 	MongoClient *bongo.Connection
 	RedisClient *redis.Client
@@ -294,7 +295,7 @@ func manipulateUserData(lg *log.Logger, lg2 logger.CustomLogger, config *Config,
 	}
 
 	// db, memory
-	node := btcd.NewBtcd(config.Btcd.Endpoint, config.Btcd.Username, config.Btcd.Password)
+	node := btcd.NewBtcd(config.Btcd.Endpoint, config.Btcd.Username, config.Btcd.Password, config.Btcd.Timeout)
 
 	alldone := false
 	transactionsDB := make([]string, 0)

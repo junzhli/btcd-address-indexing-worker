@@ -193,14 +193,14 @@ func processRequest(b *btcd, payload []byte) (*response, error) {
 }
 
 // NewBtcd creates a instance of Btcd
-func NewBtcd(ep string, user string, pass string) Btcd {
+func NewBtcd(ep string, user string, pass string, timeout time.Duration) Btcd {
 	// TODO must properly handle connection with self-certificate
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   600 * time.Second, // TODO consider to taker longer time to prevent timeout
+		Timeout:   timeout * time.Second, // TODO consider to taker longer time to prevent timeout
 	}
 	return btcd{
 		endpoint:  ep,

@@ -26,6 +26,14 @@
   version = "v6.15.6"
 
 [[projects]]
+  digest = "1:ecd9aa82687cf31d1585d4ac61d0ba180e42e8a6182b85bd785fcca8dfeefc1b"
+  name = "github.com/joho/godotenv"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "23d116af351c84513e1946b527c88823e476be13"
+  version = "v1.3.0"
+
+[[projects]]
   branch = "master"
   digest = "1:fecca08cce98d5597806d757be57e0d4f96a4ef26613c2d4fa29c8fd029dd585"
   name = "github.com/maxwellhealth/go-dotaccess"
@@ -69,6 +77,7 @@
   input-imports = [
     "github.com/go-bongo/bongo",
     "github.com/go-redis/redis",
+    "github.com/joho/godotenv",
     "github.com/streadway/amqp",
     "gopkg.in/mgo.v2/bson",
   ]

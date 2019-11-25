@@ -10,7 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/junzhli/btcd-address-indexing-worker/account"
+	"github.com/junzhli/btcd-address-indexing-worker/config"
 	"github.com/junzhli/btcd-address-indexing-worker/mongo"
 	"github.com/junzhli/btcd-address-indexing-worker/utils/logger"
 
@@ -162,11 +164,32 @@ func doTask(wg *sync.WaitGroup, id int, c chan bool, d amqp.Delivery, config *ac
 }
 
 func main() {
-	rs := initRedis()
+	err := godotenv.Load()
+	if err != nil {
+		logger.LogOnError(err, "Warning: unable to load .env file")
+	}
+	rsConf, err := config.LoadRedisConfig()
+	if err != nil {
+		logger.FailOnError(err, "Failed to load env for Redis")
+	}
+	dbConf, err := config.LoadMongoConfig()
+	if err != nil {
+		logger.FailOnError(err, "Failed to load env for MongoDB")
+	}
+	btcdConf, err := config.LoadBtcdConfig()
+	if err != nil {
+		logger.FailOnError(err, "Failed to load env for Btcd")
+	}
+	rabbitMqConf, err := config.LoadRabbitMQConfig()
+	if err != nil {
+		logger.FailOnError(err, "Failed to load env for RabbitMQ")
+	}
+
+	rs := initRedis(rsConf)
 	defer rs.Close()
-	db := initMongoDb()
+	db := initMongoDb(dbConf)
 	defer db.Session.Close()
-	receiver, messageChannel, rabbitMqConn := initRabbitMq()
+	receiver, messageChannel, rabbitMqConn := initRabbitMq(rabbitMqConf)
 	defer messageChannel.Close()
 	defer rabbitMqConn.Close()
 
@@ -196,10 +219,18 @@ func main() {
 				Endpoint string
 				Username string
 				Password string
+				Timeout  time.Duration
 			}{
-				Endpoint: "https://10.23.127.245:8334",
+<<<<<<< HEAD
+				Endpoint: "https://" + btcdConf.Host,
+				Username: btcdConf.Username,
+				Password: btcdConf.Password,
+				Timeout:  time.Duration(btcdConf.Timeout),
+=======
+				Endpoint: "https://127.0.0.1:8334",
 				Username: "user",
 				Password: "bitcoin321",
+>>>>>>> 411bb700ef64a07c7d9e3346d7ab55218a319e71
 			},
 			MongoClient: db,
 			RedisClient: rs,
@@ -231,22 +262,22 @@ func main() {
 	<-forever
 }
 
-func initRedis() *redis.Client {
+func initRedis(config *config.RedisConfig) *redis.Client {
 	return redis.NewClient(&redis.Options{
-		Addr:         "127.0.0.1:6379",
-		Password:     "",
+		Addr:         config.Host,
+		Password:     config.Password,
 		DB:           0,
 		ReadTimeout:  time.Minute,
 		WriteTimeout: time.Minute,
 	})
 }
 
-func initMongoDb() *bongo.Connection {
-	config := &bongo.Config{
-		ConnectionString: "127.0.0.1",
+func initMongoDb(config *config.MongoConfig) *bongo.Connection {
+	_config := &bongo.Config{
+		ConnectionString: config.GetConnectionString(),
 		Database:         "bitcoinindex",
 	}
-	conn, err := bongo.Connect(config)
+	conn, err := bongo.Connect(_config)
 	if err != nil {
 		logger.FailOnError(err, "An error has occurred when MongoDB gets connected")
 		panic(err)
@@ -254,8 +285,8 @@ func initMongoDb() *bongo.Connection {
 	return conn
 }
 
-func initRabbitMq() (<-chan amqp.Delivery, *amqp.Channel, *amqp.Connection) {
-	connection, err := amqp.Dial("amqp://guest:guest@127.0.0.1:5672")
+func initRabbitMq(config *config.RabbitMQConfig) (<-chan amqp.Delivery, *amqp.Channel, *amqp.Connection) {
+	connection, err := amqp.Dial("amqp://" + config.GetConnectionString())
 	if err != nil {
 		logger.FailOnError(err, "An error has occurred when RabbitMQ gets connected")
 		panic(err)
