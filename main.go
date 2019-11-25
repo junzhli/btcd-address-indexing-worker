@@ -221,16 +221,10 @@ func main() {
 				Password string
 				Timeout  time.Duration
 			}{
-<<<<<<< HEAD
 				Endpoint: "https://" + btcdConf.Host,
 				Username: btcdConf.Username,
 				Password: btcdConf.Password,
 				Timeout:  time.Duration(btcdConf.Timeout),
-=======
-				Endpoint: "https://127.0.0.1:8334",
-				Username: "user",
-				Password: "bitcoin321",
->>>>>>> 411bb700ef64a07c7d9e3346d7ab55218a319e71
 			},
 			MongoClient: db,
 			RedisClient: rs,
