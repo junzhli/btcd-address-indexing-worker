@@ -35,7 +35,7 @@ Configuration and Run
 -----
 * Configurable options
 
-**Please set environment variables with file called .env, you can begin with file `.env.template` for reference**
+**Please set environment variables with file called `.env` and place this under the current path where you run this program on shell. You can begin with file `.env.template` for reference**
 
 | Name                  | Required | Default value   | Description                          |
 |-----------------------|----------|-----------------|--------------------------------------|
