@@ -14,6 +14,7 @@ import (
 	"github.com/junzhli/btcd-address-indexing-worker/account"
 	"github.com/junzhli/btcd-address-indexing-worker/config"
 	"github.com/junzhli/btcd-address-indexing-worker/mongo"
+	"github.com/junzhli/btcd-address-indexing-worker/utils/btcd"
 	"github.com/junzhli/btcd-address-indexing-worker/utils/logger"
 
 	"github.com/go-bongo/bongo"
@@ -192,6 +193,7 @@ func main() {
 	receiver, messageChannel, rabbitMqConn := initRabbitMq(rabbitMqConf)
 	defer messageChannel.Close()
 	defer rabbitMqConn.Close()
+	node := btcd.New("https://"+btcdConf.Host, btcdConf.Username, btcdConf.Password, time.Duration(btcdConf.Timeout))
 
 	running := true
 	var wg sync.WaitGroup
@@ -215,17 +217,7 @@ func main() {
 	tasks := 0
 	go func() {
 		config := &account.Config{
-			Btcd: struct {
-				Endpoint string
-				Username string
-				Password string
-				Timeout  time.Duration
-			}{
-				Endpoint: "https://" + btcdConf.Host,
-				Username: btcdConf.Username,
-				Password: btcdConf.Password,
-				Timeout:  time.Duration(btcdConf.Timeout),
-			},
+			Btcd:        node,
 			MongoClient: db,
 			RedisClient: rs,
 		}
