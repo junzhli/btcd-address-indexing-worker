@@ -3,7 +3,7 @@ package mongo
 import (
 	"errors"
 
-	"github.com/junzhli/btcd-address-indexing-worker/utils/logger"
+	"github.com/junzhli/btcd-address-indexing-worker/logger"
 
 	"github.com/go-bongo/bongo"
 	"gopkg.in/mgo.v2/bson"

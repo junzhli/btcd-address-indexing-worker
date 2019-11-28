@@ -12,10 +12,10 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/junzhli/btcd-address-indexing-worker/account"
+	"github.com/junzhli/btcd-address-indexing-worker/btcd"
 	"github.com/junzhli/btcd-address-indexing-worker/config"
+	"github.com/junzhli/btcd-address-indexing-worker/logger"
 	"github.com/junzhli/btcd-address-indexing-worker/mongo"
-	"github.com/junzhli/btcd-address-indexing-worker/utils/btcd"
-	"github.com/junzhli/btcd-address-indexing-worker/utils/logger"
 
 	"github.com/go-bongo/bongo"
 	"github.com/go-redis/redis"

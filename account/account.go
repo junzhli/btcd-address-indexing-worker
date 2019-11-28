@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/junzhli/btcd-address-indexing-worker/btcd"
+	"github.com/junzhli/btcd-address-indexing-worker/logger"
 	"github.com/junzhli/btcd-address-indexing-worker/mongo"
 	rs "github.com/junzhli/btcd-address-indexing-worker/redis"
 	rsmgo "github.com/junzhli/btcd-address-indexing-worker/redis/mongo"
 	"github.com/junzhli/btcd-address-indexing-worker/redis/utils"
-	"github.com/junzhli/btcd-address-indexing-worker/utils/btcd"
-	"github.com/junzhli/btcd-address-indexing-worker/utils/logger"
 
 	"github.com/go-redis/redis"
 )
