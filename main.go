@@ -68,6 +68,7 @@ func doTask(wg *sync.WaitGroup, id int, c chan bool, d amqp.Delivery, config *ac
 	c <- true
 	lg := log.New(os.Stdout, "[Task "+strconv.Itoa(id)+"] ", log.LstdFlags)
 	lg2 := logger.New(lg)
+	acout := account.New(lg, lg2, config)
 	lg.Printf("Received a message: %s", d.Body)
 
 	var req request
@@ -82,7 +83,7 @@ func doTask(wg *sync.WaitGroup, id int, c chan bool, d amqp.Delivery, config *ac
 		var res []byte
 		switch req.Task {
 		case CommandBalance:
-			balance, err := account.GetAddressBalance(lg, lg2, config, req.Account)
+			balance, err := acout.GetAddressBalance(req.Account)
 			if err != nil {
 				lg2.LogOnError(err, "Fails on the task")
 				break
@@ -95,7 +96,7 @@ func doTask(wg *sync.WaitGroup, id int, c chan bool, d amqp.Delivery, config *ac
 				balance,
 			})
 		case CommandTransactions:
-			transactions, err := account.GetAddressTransactions(lg, lg2, config, req.Account)
+			transactions, err := acout.GetAddressTransactions(req.Account)
 			if err != nil {
 				lg2.LogOnError(err, "Fails on the task")
 				break
@@ -108,7 +109,7 @@ func doTask(wg *sync.WaitGroup, id int, c chan bool, d amqp.Delivery, config *ac
 				transactions,
 			})
 		case CommandUnspents:
-			unspents, err := account.GetAddressUnspentOutputs(lg, lg2, config, req.Account)
+			unspents, err := acout.GetAddressUnspentOutputs(req.Account)
 			if err != nil {
 				lg2.LogOnError(err, "Fails on the task")
 				break
@@ -127,7 +128,7 @@ func doTask(wg *sync.WaitGroup, id int, c chan bool, d amqp.Delivery, config *ac
 				_unspents,
 			})
 		case CommandAll:
-			result, err := account.GetAddressResult(lg, lg2, config, req.Account)
+			result, err := acout.GetAddressResult(req.Account)
 			if err != nil {
 				lg2.LogOnError(err, "Fails on the task")
 				break
@@ -194,6 +195,7 @@ func main() {
 	defer messageChannel.Close()
 	defer rabbitMqConn.Close()
 	node := btcd.New("https://"+btcdConf.Host, btcdConf.Username, btcdConf.Password, time.Duration(btcdConf.Timeout))
+	mongo := mongo.New(db)
 
 	running := true
 	var wg sync.WaitGroup
@@ -218,7 +220,7 @@ func main() {
 	go func() {
 		config := &account.Config{
 			Btcd:        node,
-			MongoClient: db,
+			Mongo:       mongo,
 			RedisClient: rs,
 		}
 

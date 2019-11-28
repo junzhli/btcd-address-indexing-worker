@@ -15,14 +15,13 @@ import (
 	"github.com/junzhli/btcd-address-indexing-worker/utils/btcd"
 	"github.com/junzhli/btcd-address-indexing-worker/utils/logger"
 
-	"github.com/go-bongo/bongo"
 	"github.com/go-redis/redis"
 )
 
 // Config includes all necessary arguments during operation
 type Config struct {
 	Btcd        btcd.Btcd
-	MongoClient *bongo.Connection
+	Mongo       mongo.Mongo
 	RedisClient *redis.Client
 }
 
@@ -198,18 +197,18 @@ func removeStateKeyRedis(config *Config, key string) {
 // manipulateUserData processes raw data from database and btcd jsonRpc service as follows
 // it keeps data in database up to date by appending newly update instead of replacing the old one for consistency and performance improvement
 // it only appends data confirmed at least n 'confirmations' which is defined in 'account.go' to database
-// otherwise, other data are always gathering from btcd and then merge them into data from database processing on-the-air for serving real-time data
-func manipulateUserData(lg *log.Logger, lg2 logger.CustomLogger, config *Config, targetAddr string) (*userData, error) {
+// otherwise, other data are always gathered from btcd and then merge them into data from database processing on-the-air for serving real-time data
+func manipulateUserData(acc *account, targetAddr string) (*userData, error) {
 	key := utils.GenStateKey(targetAddr, rs.CommandAll)
-	defer removeStateKeyRedis(config, key)
+	defer removeStateKeyRedis(acc.config, key)
 	// pre-checks
-	state, err := config.RedisClient.Get(key).Result()
+	state, err := acc.config.RedisClient.Get(key).Result()
 	if err == redis.Nil {
-		lg2.LogOnError(err, "Could not find key existing in redis: key => "+key)
+		acc.customLogger2.LogOnError(err, "Could not find key existing in redis: key => "+key)
 		return nil, err
 	}
 	if err != nil {
-		lg2.LogOnError(err, "Fails on checking whether the key exists on redis: key => "+key)
+		acc.customLogger2.LogOnError(err, "Fails on checking whether the key exists on redis: key => "+key)
 		return nil, err
 	}
 
@@ -236,35 +235,35 @@ func manipulateUserData(lg *log.Logger, lg2 logger.CustomLogger, config *Config,
 		// redis
 		startTime = time.Now()
 		key = utils.GenCacheKey(targetAddr, rs.CommandAll)
-		preDB, err = rsmgo.RestoreUserHistory(config.RedisClient, key)
+		preDB, err = rsmgo.RestoreUserHistory(acc.config.RedisClient, key)
 
 		if err != nil {
 			if err == redis.Nil {
-				lg.Println("Cached data is unavailable")
+				acc.customLogger.Println("Cached data is unavailable")
 				fetchFromDB = true
 			} else {
-				lg2.LogOnError(err, "Error occurred on the request of fetching cached data from redis")
+				acc.customLogger2.LogOnError(err, "Error occurred on the request of fetching cached data from redis")
 				return nil, err
 			}
 		}
 		elapsedTime = time.Since(startTime)
-		lg.Println("Data accessed from redis takes " + elapsedTime.String())
+		acc.customLogger.Println("Data accessed from redis takes " + elapsedTime.String())
 
 		// database
 		if fetchFromDB {
 			startTime = time.Now()
-			preDB, err = mongo.GetUserHistory(config.MongoClient, targetAddr)
+			preDB, err = acc.config.Mongo.GetUserHistory(targetAddr)
 
 			if err != nil {
 				if err.Error() == mongo.ErrorNoUserInfo {
 					new = true
 				} else {
-					lg2.LogOnError(err, "Fails on the request of cached user detailed transaction history")
+					acc.customLogger2.LogOnError(err, "Fails on the request of cached user detailed transaction history")
 					return nil, err
 				}
 			}
 			elapsedTime = time.Since(startTime)
-			lg.Println("Data accessed from database takes " + elapsedTime.String())
+			acc.customLogger.Println("Data accessed from database takes " + elapsedTime.String())
 		}
 
 		startTime = time.Now()
@@ -282,15 +281,15 @@ func manipulateUserData(lg *log.Logger, lg2 logger.CustomLogger, config *Config,
 			restoreSpentStates(spentsAll, preDB.Shadowspents)
 		}
 		elapsedTime = time.Since(startTime)
-		lg.Println("Preparing data from database/redis takes " + elapsedTime.String())
+		acc.customLogger.Println("Preparing data from database/redis takes " + elapsedTime.String())
 	} else if state == rs.StateNew {
-		lg.Println("New address detected... bypass query for database/redis")
+		acc.customLogger.Println("New address detected... bypass query for database/redis")
 	} else {
-		lg2.FailOnError(errors.New("Unknown state"), "Unsupported state on redis")
+		acc.customLogger2.FailOnError(errors.New("Unknown state"), "Unsupported state on redis")
 	}
 
 	// db, memory
-	node := config.Btcd
+	node := acc.config.Btcd
 
 	alldone := false
 	transactionsDB := make([]string, 0)
@@ -311,12 +310,12 @@ func manipulateUserData(lg *log.Logger, lg2 logger.CustomLogger, config *Config,
 		startTime = time.Now()
 		res, err := node.SearchRawTransactions(targetAddr, start, maxRequestedTransactionsRecord)
 		elapsedTime = time.Since(startTime)
-		lg.Println("Fetching data from btcd takes " + elapsedTime.String())
+		acc.customLogger.Println("Fetching data from btcd takes " + elapsedTime.String())
 		if err != nil {
 			if err.Error() == btcd.ErrorNoDataReturned {
 				break
 			}
-			lg2.LogOnError(err, "Fails on the request of user detailed transaction history")
+			acc.customLogger2.LogOnError(err, "Fails on the request of user detailed transaction history")
 			return nil, err
 		}
 
@@ -396,14 +395,14 @@ func manipulateUserData(lg *log.Logger, lg2 logger.CustomLogger, config *Config,
 							spent, ok = spentsDB[key]
 							if !ok {
 								err := errors.New("Cannot find key " + key + " on 'spentsPreDB/spentsDB'")
-								lg2.LogOnError(err, "Should exist this unspent key on 'spentsPreDB/spentsDB'. Corrupted database?")
+								acc.customLogger2.LogOnError(err, "Should exist this unspent key on 'spentsPreDB/spentsDB'. Corrupted database?")
 								return nil, err
 							}
 
 							spentPersistent, ok := spentsDBPersistent[key]
 							if ok && spentPersistent {
 								err := errors.New("Double spent at key: " + key)
-								lg2.LogOnError(err, "Should not spend spent fund! Corrupted database?")
+								acc.customLogger2.LogOnError(err, "Should not spend spent fund! Corrupted database?")
 								return nil, err
 							}
 							spentsDBPersistent[key] = true
@@ -419,7 +418,7 @@ func manipulateUserData(lg *log.Logger, lg2 logger.CustomLogger, config *Config,
 								spent, ok = spentsNonDB[key]
 								if !ok {
 									err := errors.New("Cannot find key " + key + " on 'spentsPreDB/spentsDB/spentsNonDB'")
-									lg2.LogOnError(err, "Should exist this unspent key on 'spentsPreDB/spentsDB/spentsNonDB'. Corrupted database?")
+									acc.customLogger2.LogOnError(err, "Should exist this unspent key on 'spentsPreDB/spentsDB/spentsNonDB'. Corrupted database?")
 									return nil, err
 								}
 							}
@@ -427,7 +426,7 @@ func manipulateUserData(lg *log.Logger, lg2 logger.CustomLogger, config *Config,
 					}
 					if *spent {
 						err := errors.New("Double spent at key: " + key)
-						lg2.LogOnError(err, "Should not spend spent fund! Corrupted database?")
+						acc.customLogger2.LogOnError(err, "Should not spend spent fund! Corrupted database?")
 						return nil, err
 					}
 					*spent = true
@@ -443,7 +442,7 @@ func manipulateUserData(lg *log.Logger, lg2 logger.CustomLogger, config *Config,
 		}
 	}
 	elapsedTime2 := time.Since(startTime2)
-	lg.Println("Data accessed from btcd totally takes " + elapsedTime2.String())
+	acc.customLogger.Println("Data accessed from btcd totally takes " + elapsedTime2.String())
 
 	skipped = uint64(len(transactionsDB) + len(transactionsPreDB))
 
@@ -453,43 +452,43 @@ func manipulateUserData(lg *log.Logger, lg2 logger.CustomLogger, config *Config,
 			startTime = time.Now()
 			usrHistory = createUserHistory(targetAddr, unspentsDB, unspentAmtsDB, spentsDBPersistent, shadowSpentsDB, transactionsDB, skipped, subtotalDB)
 			elapsedTime = time.Since(startTime)
-			lg.Println("The task requested to prepare for UserHistory takes " + elapsedTime.String())
+			acc.customLogger.Println("The task requested to prepare for UserHistory takes " + elapsedTime.String())
 
 			startTime = time.Now()
-			err = mongo.PutUserHistory(config.MongoClient, usrHistory)
+			err = acc.config.Mongo.PutUserHistory(usrHistory)
 			elapsedTime = time.Since(startTime)
-			lg.Println("Document creation on database takes " + elapsedTime.String())
+			acc.customLogger.Println("Document creation on database takes " + elapsedTime.String())
 			if err != nil {
-				lg2.LogOnError(err, "Fails on the document creation in database")
+				acc.customLogger2.LogOnError(err, "Fails on the document creation in database")
 				return nil, err
 			}
 		} else {
-			lg.Println("No need to create/update document on database")
+			acc.customLogger.Println("No need to create/update document on database")
 		}
 
 		// redis
 		startTime = time.Now()
 		cachedUsrHistory, err := combineUserHistory(preDB, usrHistory)
 		if err != nil {
-			lg2.LogOnError(err, "Fails on the creation of cached data for redis")
+			acc.customLogger2.LogOnError(err, "Fails on the creation of cached data for redis")
 			return nil, err
 		}
 		elapsedTime = time.Since(startTime)
-		lg.Println("The creation of cached data for redis takes " + elapsedTime.String())
+		acc.customLogger.Println("The creation of cached data for redis takes " + elapsedTime.String())
 
 		startTime = time.Now()
 		key = utils.GenCacheKey(targetAddr, rs.CommandAll)
-		err = rsmgo.CacheUserHistory(config.RedisClient, key, cachedUsrHistory, 3600*time.Second)
+		err = rsmgo.CacheUserHistory(acc.config.RedisClient, key, cachedUsrHistory, 3600*time.Second)
 		if err != nil {
-			lg2.LogOnError(err, "Fails on updating cached data on redis... trying to remove cached data on redis")
-			err = config.RedisClient.Del(key).Err()
+			acc.customLogger2.LogOnError(err, "Fails on updating cached data on redis... trying to remove cached data on redis")
+			err = acc.config.RedisClient.Del(key).Err()
 			if err != nil {
-				lg2.LogOnError(err, "Fails on removing cached data on redis")
+				acc.customLogger2.LogOnError(err, "Fails on removing cached data on redis")
 				return nil, err
 			}
 			return nil, err
 		}
-		lg.Println("The creation of cached data on redis takes " + elapsedTime.String())
+		acc.customLogger.Println("The creation of cached data on redis takes " + elapsedTime.String())
 	}
 
 	res := userData{
@@ -501,9 +500,23 @@ func manipulateUserData(lg *log.Logger, lg2 logger.CustomLogger, config *Config,
 	return &res, nil
 }
 
+// Account provides worker with all account relevant information
+type Account interface {
+	GetAddressBalance(addr string) (float64, error)
+	GetAddressTransactions(addr string) ([]string, error)
+	GetAddressUnspentOutputs(addr string) ([]*mongo.Unspent, error)
+	GetAddressResult(addr string) (*UserData, error)
+}
+
+type account struct {
+	customLogger  *log.Logger
+	customLogger2 logger.CustomLogger
+	config        *Config
+}
+
 // GetAddressBalance returns the balance of the given account
-func GetAddressBalance(lg *log.Logger, lg2 logger.CustomLogger, config *Config, addr string) (float64, error) {
-	uData, err := manipulateUserData(lg, lg2, config, addr)
+func (acc *account) GetAddressBalance(addr string) (float64, error) {
+	uData, err := manipulateUserData(acc, addr)
 	if err != nil {
 		return 0, err
 	}
@@ -511,8 +524,8 @@ func GetAddressBalance(lg *log.Logger, lg2 logger.CustomLogger, config *Config, 
 }
 
 // GetAddressTransactions returns the list of transaction ids with the given account
-func GetAddressTransactions(lg *log.Logger, lg2 logger.CustomLogger, config *Config, addr string) ([]string, error) {
-	uData, err := manipulateUserData(lg, lg2, config, addr)
+func (acc *account) GetAddressTransactions(addr string) ([]string, error) {
+	uData, err := manipulateUserData(acc, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -520,8 +533,8 @@ func GetAddressTransactions(lg *log.Logger, lg2 logger.CustomLogger, config *Con
 }
 
 // GetAddressUnspentOutputs returns the unspent outputs of the given account
-func GetAddressUnspentOutputs(lg *log.Logger, lg2 logger.CustomLogger, config *Config, addr string) ([]*mongo.Unspent, error) {
-	uData, err := manipulateUserData(lg, lg2, config, addr)
+func (acc *account) GetAddressUnspentOutputs(addr string) ([]*mongo.Unspent, error) {
+	uData, err := manipulateUserData(acc, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -531,8 +544,8 @@ func GetAddressUnspentOutputs(lg *log.Logger, lg2 logger.CustomLogger, config *C
 }
 
 // GetAddressResult returns details for the given address
-func GetAddressResult(lg *log.Logger, lg2 logger.CustomLogger, config *Config, addr string) (*UserData, error) {
-	uData, err := manipulateUserData(lg, lg2, config, addr)
+func (acc *account) GetAddressResult(addr string) (*UserData, error) {
+	uData, err := manipulateUserData(acc, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -549,6 +562,15 @@ func GetAddressResult(lg *log.Logger, lg2 logger.CustomLogger, config *Config, a
 		Unspents:     _unspents,
 	}
 	return &res, nil
+}
+
+// New creates an instance of Account
+func New(customLogger *log.Logger, customLogger2 logger.CustomLogger, config *Config) Account {
+	return &account{
+		customLogger,
+		customLogger2,
+		config,
+	}
 }
 
 func genUTXO(outputs []*mongo.Unspent, spents map[string]*bool) []*mongo.Unspent {

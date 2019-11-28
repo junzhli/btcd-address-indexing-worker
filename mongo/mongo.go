@@ -11,16 +11,26 @@ import (
 
 const dbUser string = "users"
 
+// Mongo deals with mongo database stuffs
+type Mongo interface {
+	PutUserHistory(doc *UserHistory) error
+	GetUserHistory(addr string) (*UserHistory, error)
+}
+
+type mongo struct {
+	conn *bongo.Connection
+}
+
 // PutUserHistory stores provided document to database
-func PutUserHistory(conn *bongo.Connection, doc *UserHistory) error {
+func (m *mongo) PutUserHistory(doc *UserHistory) error {
 	_doc := newUserHistoryModel(doc)
-	return conn.Collection(dbUser).Save(&_doc)
+	return m.conn.Collection(dbUser).Save(&_doc)
 }
 
 // GetUserHistory fetches revalant address history from database
-func GetUserHistory(conn *bongo.Connection, addr string) (*UserHistory, error) {
+func (m *mongo) GetUserHistory(addr string) (*UserHistory, error) {
 	var histories []userHistoryModel
-	err := conn.Collection(dbUser).Find(bson.M{"address": addr}).Query.Sort("timestamp").All(&histories)
+	err := m.conn.Collection(dbUser).Find(bson.M{"address": addr}).Query.Sort("timestamp").All(&histories)
 	if err != nil {
 		logger.LogOnError(err, "Failed to fetch user history from database")
 		return nil, err
@@ -61,6 +71,13 @@ func GetUserHistory(conn *bongo.Connection, addr string) (*UserHistory, error) {
 		Transactions: txs,
 		Skipped:      skipped,
 	}, nil
+}
+
+// New creates an instance of Mongo
+func New(conn *bongo.Connection) Mongo {
+	return &mongo{
+		conn,
+	}
 }
 
 func mergeSpents(a map[string]bool, b map[string]bool) error {
