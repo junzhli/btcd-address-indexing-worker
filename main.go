@@ -16,6 +16,7 @@ import (
 	"github.com/junzhli/btcd-address-indexing-worker/config"
 	"github.com/junzhli/btcd-address-indexing-worker/logger"
 	"github.com/junzhli/btcd-address-indexing-worker/mongo"
+	rs "github.com/junzhli/btcd-address-indexing-worker/redis"
 
 	"github.com/go-bongo/bongo"
 	"github.com/go-redis/redis"
@@ -219,9 +220,9 @@ func main() {
 	tasks := 0
 	go func() {
 		config := &account.Config{
-			Btcd:        node,
-			Mongo:       mongo,
-			RedisClient: rs,
+			Btcd:  node,
+			Mongo: mongo,
+			Redis: rs,
 		}
 
 		log.Printf("Consumer ready, PID: %d", os.Getpid())
@@ -250,8 +251,8 @@ func main() {
 	<-forever
 }
 
-func initRedis(config *config.RedisConfig) *redis.Client {
-	return redis.NewClient(&redis.Options{
+func initRedis(config *config.RedisConfig) rs.Redis {
+	return rs.New(&redis.Options{
 		Addr:         config.Host,
 		Password:     config.Password,
 		DB:           0,

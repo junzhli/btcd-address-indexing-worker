@@ -33,7 +33,7 @@ type response struct {
 
 // Btcd is used for queries, in compliance with Btcd JSON-RPC spec
 type Btcd interface {
-	SearchRawTransactions(addr string, startIdx int64, max int64) (*[]responseSearchRawTransactions, error)
+	SearchRawTransactions(addr string, startIdx int64, max int64) (*[]ResponseSearchRawTransactions, error)
 	GetInfo() (*map[string]interface{}, error)
 }
 
@@ -107,7 +107,7 @@ type vin struct {
 	PrevOut   prevOut `json:"prevOut"`
 }
 
-type responseSearchRawTransactions struct {
+type ResponseSearchRawTransactions struct {
 	Txid          string `json:"txid"`
 	Vins          []vin  `json:"vin"`
 	Vouts         []vout `json:"vout"`
@@ -116,7 +116,7 @@ type responseSearchRawTransactions struct {
 }
 
 // SearchRawTransactions get relevant transactions with given bitcoin address
-func (b btcd) SearchRawTransactions(addr string, startIdx int64, max int64) (*[]responseSearchRawTransactions, error) {
+func (b btcd) SearchRawTransactions(addr string, startIdx int64, max int64) (*[]ResponseSearchRawTransactions, error) {
 	// params:
 	// 1. address (string, required) - bitcoin address
 	// 2. verbose (int, optional, default=true) - specifies the transaction is returned as a JSON object instead of hex-encoded string
@@ -145,7 +145,7 @@ func (b btcd) SearchRawTransactions(addr string, startIdx int64, max int64) (*[]
 		return nil, JSONRPCError{Code: res.Error.Code, Message: res.Error.Message}
 	}
 
-	var result []responseSearchRawTransactions
+	var result []ResponseSearchRawTransactions
 	if err := json.Unmarshal([]byte(res.Result), &result); err != nil {
 		logger.LogOnError(err, "Failed to parse response - phase 1")
 		return nil, err

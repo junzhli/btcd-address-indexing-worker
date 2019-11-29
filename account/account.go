@@ -8,21 +8,20 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/junzhli/btcd-address-indexing-worker/btcd"
 	"github.com/junzhli/btcd-address-indexing-worker/logger"
 	"github.com/junzhli/btcd-address-indexing-worker/mongo"
 	rs "github.com/junzhli/btcd-address-indexing-worker/redis"
 	rsmgo "github.com/junzhli/btcd-address-indexing-worker/redis/mongo"
 	"github.com/junzhli/btcd-address-indexing-worker/redis/utils"
-
-	"github.com/go-redis/redis"
 )
 
 // Config includes all necessary arguments during operation
 type Config struct {
-	Btcd        btcd.Btcd
-	Mongo       mongo.Mongo
-	RedisClient *redis.Client
+	Btcd  btcd.Btcd
+	Mongo mongo.Mongo
+	Redis rs.Redis
 }
 
 const maxRequestedTransactionsRecord = 2000
@@ -188,7 +187,7 @@ func restoreSpentStates(result map[string]*bool, shadowSpts []string) error {
 }
 
 func removeStateKeyRedis(config *Config, key string) {
-	err := config.RedisClient.Del(key).Err()
+	err := config.Redis.Del(key)
 	if err != nil {
 		logger.FailOnError(err, "Failed to remove key in redis: key => "+key)
 	}
@@ -202,7 +201,7 @@ func manipulateUserData(acc *account, targetAddr string) (*userData, error) {
 	key := utils.GenStateKey(targetAddr, rs.CommandAll)
 	defer removeStateKeyRedis(acc.config, key)
 	// pre-checks
-	state, err := acc.config.RedisClient.Get(key).Result()
+	state, err := acc.config.Redis.Get(key)
 	if err == redis.Nil {
 		acc.customLogger2.LogOnError(err, "Could not find key existing in redis: key => "+key)
 		return nil, err
@@ -235,7 +234,7 @@ func manipulateUserData(acc *account, targetAddr string) (*userData, error) {
 		// redis
 		startTime = time.Now()
 		key = utils.GenCacheKey(targetAddr, rs.CommandAll)
-		preDB, err = rsmgo.RestoreUserHistory(acc.config.RedisClient, key)
+		preDB, err = rsmgo.RestoreUserHistory(acc.config.Redis, key)
 
 		if err != nil {
 			if err == redis.Nil {
@@ -478,10 +477,10 @@ func manipulateUserData(acc *account, targetAddr string) (*userData, error) {
 
 		startTime = time.Now()
 		key = utils.GenCacheKey(targetAddr, rs.CommandAll)
-		err = rsmgo.CacheUserHistory(acc.config.RedisClient, key, cachedUsrHistory, 3600*time.Second)
+		err = rsmgo.CacheUserHistory(acc.config.Redis, key, cachedUsrHistory, 3600*time.Second)
 		if err != nil {
 			acc.customLogger2.LogOnError(err, "Fails on updating cached data on redis... trying to remove cached data on redis")
-			err = acc.config.RedisClient.Del(key).Err()
+			err = acc.config.Redis.Del(key)
 			if err != nil {
 				acc.customLogger2.LogOnError(err, "Fails on removing cached data on redis")
 				return nil, err
