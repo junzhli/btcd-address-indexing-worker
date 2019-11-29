@@ -1,6 +1,6 @@
 # Bitcoin address indexing worker
 [![Build Status](https://travis-ci.org/junzhli/btcd-address-indexing-worker.svg?branch=dev)](https://travis-ci.org/junzhli/btcd-address-indexing-worker) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![GoDoc](https://godoc.org/github.com/junzhli/btcd-address-indexing-worker?status.svg)](https://godoc.org/github.com/junzhli/btcd-address-indexing-worker)  
-Bitcoin Address Indexing Worker provides the web service [btcd-address-indexing-service](https://github.com/junzhli/btcd-address-indexing-worker) with additional indexing, caching mechanisms and address relevant information lookups
+Bitcoin Address Indexing Worker provides the web service [btcd-address-indexing-service](https://github.com/junzhli/btcd-address-indexing-service) with additional indexing, caching mechanisms and address relevant information lookups
 
 ## Table of Contents
 - [Bitcoin address indexing worker](#bitcoin-address-indexing-worker)
