@@ -1,0 +1,5 @@
+# Runtime environment variables
+.env
+
+# Dependency directories
+vendor/
