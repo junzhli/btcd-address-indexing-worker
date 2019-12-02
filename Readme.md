@@ -25,6 +25,12 @@ $ go get -v github.com/junzhli/btcd-address-indexing-worker
 $ cd $GOPATH/src/github.com/junzhli/btcd-address-indexing-worker
 ```
 
+* Test
+
+```bash
+$ go test ./...
+```
+
 * Build
   
 ```bash
