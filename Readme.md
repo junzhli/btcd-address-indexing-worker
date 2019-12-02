@@ -34,7 +34,7 @@ $ go test ./...
 * Build
   
 ```bash
-$ go install
+$ go install # should install executable program under $GOPATH/bin
 ```
 
 Configuration and Run
