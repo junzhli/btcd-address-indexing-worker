@@ -3,3 +3,6 @@
 
 # Dependency directories
 vendor/
+
+# Jetbrains
+.idea/
